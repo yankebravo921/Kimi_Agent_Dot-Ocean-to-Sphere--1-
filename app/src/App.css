@@ -1,0 +1,42 @@
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+  background: #05120a;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #05120a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(53, 240, 224, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(53, 240, 224, 0.5);
+}
+
+/* Canvas styling */
+canvas {
+  display: block;
+}
