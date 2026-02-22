@@ -5,6 +5,7 @@ import CosmicCountdown from './components/CountdownSection';
 import FireflyCatch from './components/BeginningSection';
 import WarpTunnel from './components/DistanceSection';
 import LanternSky from './components/PromiseSection';
+import SunriseSection from './components/SunriseSection';
 import VideoSection from './components/VideoSection';
 
 function App() {
@@ -51,19 +52,22 @@ function App() {
       {/* ====== SECTION 1 — Particle Ocean → "Hey sweety" ====== */}
       <ParticleOcean />
 
-      {/* ====== SECTION 2 — Cosmic Galaxy → "23" ====== */}
+      {/* ====== SECTION 2 — "Written in Light" sparkler ====== */}
       <CosmicCountdown />
 
-      {/* ====== SECTION 3 — Firefly Catch Mini-Game ====== */}
+      {/* ====== SECTION 3 — Sunrise ====== */}
+      <SunriseSection />
+
+      {/* ====== SECTION 4 — Firefly Catch Mini-Game ====== */}
       <FireflyCatch />
 
-      {/* ====== SECTION 4 — Warp Tunnel Hyperspace ====== */}
+      {/* ====== SECTION 5 — Warp Tunnel Hyperspace ====== */}
       <WarpTunnel />
 
-      {/* ====== SECTION 5 — Lantern Sky → Heart Formation ====== */}
+      {/* ====== SECTION 6 — Lantern Sky → Heart Formation ====== */}
       <LanternSky />
 
-      {/* ====== SECTION 6 — Video ====== */}
+      {/* ====== SECTION 7 — Video ====== */}
       <VideoSection />
     </div>
   );

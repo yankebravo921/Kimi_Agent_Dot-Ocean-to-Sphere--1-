@@ -446,7 +446,7 @@ export default function ParticleOcean() {
       ref={containerRef}
       className="relative w-full h-screen"
       style={{
-        background: 'radial-gradient(ellipse at 50% 0%, #1a3d32 0%, #0d281e 30%, #05120a 70%, #020805 100%)'
+        background: 'radial-gradient(ellipse at 50% 0%, #12081e 0%, #0a0514 30%, #060210 70%, #050208 100%)'
       }}
     />
   );
