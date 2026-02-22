@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface Firefly {
     x: number; y: number; vx: number; vy: number;
@@ -13,30 +17,67 @@ interface Sparkle {
 
 const TOTAL = 5;
 
-// Placeholder photos — will be replaced with real images
-const PHOTOS = [
-    { id: 1, gradient: 'linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%)', emoji: '👑', label: 'My Princess' },
-    { id: 2, gradient: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 50%, #ffcc80 100%)', emoji: '🌸', label: 'Beautiful Soul' },
-    { id: 3, gradient: 'linear-gradient(135deg, #e8eaf6 0%, #c5cae9 50%, #9fa8da 100%)', emoji: '✨', label: 'Magic Moments' },
-    { id: 4, gradient: 'linear-gradient(135deg, #fce4ec 0%, #e1bee7 50%, #ce93d8 100%)', emoji: '🦋', label: 'Dreamer' },
-    { id: 5, gradient: 'linear-gradient(135deg, #e0f7fa 0%, #b2dfdb 50%, #80cbc4 100%)', emoji: '🌷', label: 'Garden Heart' },
-    { id: 6, gradient: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 50%, #ffe082 100%)', emoji: '💫', label: 'Forever Yours' },
+const CARDS = [
+    {
+        id: 1,
+        image: '/card1.jpeg',
+        emoji: '👑',
+        back: 'Because the way you love isn\'t something you learned. It\'s something you are. All the way through. No seasons. No limits. I just got lucky enough to be loved by one.',
+    },
+    {
+        id: 2,
+        image: '/card2.jpeg',
+        bgPos: 'center 20%',
+        emoji: '🌸',
+        back: 'Because your heart is clean. In a world that teaches people to protect themselves by becoming hard, you stayed soft. You stayed true. That\'s not weakness. That\'s the rarest kind of courage.',
+    },
+    {
+        id: 3,
+        image: '/card3.jpeg',
+        emoji: '✨',
+        back: 'Because you never stopped believing in me. Not once. On the days I couldn\'t see myself clearly, you held the vision steady. And quietly, without knowing it, you helped me get there.',
+    },
+    {
+        id: 4,
+        image: '/card4.jpeg',
+        emoji: '🦋',
+        back: 'Because you never let me down. Not in the small things. Not in the ones that mattered most. In a world full of almost, you are someone who actually shows up. Completely. Every time.',
+    },
+    {
+        id: 5,
+        image: '/card5.jpeg',
+        emoji: '🌷',
+        back: 'Because you feel everything fully and you\'re not ashamed of it. Your tears are real. Your joy is real. Your love is real. You live honestly from the inside out. And that kind of honesty — it\'s contagious.',
+    },
+    {
+        id: 6,
+        image: '/card6.jpeg',
+        bgPos: 'center 20%',
+        emoji: '💫',
+        back: 'Because underneath everything you\'re still that little kid. Still pure. Still curious. Still feeling the world like it\'s the first time. That part of you is the most precious thing I know. Happy Birthday, my love. Every single reason leads back to you. Always.',
+    },
 ];
 
 export default function BeginningSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const sectionRef = useRef<HTMLDivElement>(null);
-    const catalogRef = useRef<HTMLDivElement>(null);
+    const catalogSectionRef = useRef<HTMLDivElement>(null);
+    const catalogTrackRef = useRef<HTMLDivElement>(null);
     const firefliesRef = useRef<Firefly[]>([]);
     const sparklesRef = useRef<Sparkle[]>([]);
     const [caught, setCaught] = useState(0);
     const [jarFull, setJarFull] = useState(false);
     const [showCatalog, setShowCatalog] = useState(false);
+    const [flipped, setFlipped] = useState<Record<number, boolean>>({});
     const caughtRef = useRef(0);
     const jarFullRef = useRef(false);
     const heartProgressRef = useRef(0);
     const isVisibleRef = useRef(false);
     const showCatalogRef = useRef(false);
+
+    const toggleFlip = (id: number) => {
+        setFlipped((prev) => ({ ...prev, [id]: !prev[id] }));
+    };
 
     const spawnFirefly = useCallback((w: number, h: number): Firefly => ({
         x: Math.random() * w,
@@ -51,6 +92,7 @@ export default function BeginningSection() {
         catchAnim: 0,
     }), []);
 
+    // Firefly game canvas
     useEffect(() => {
         const canvas = canvasRef.current;
         const section = sectionRef.current;
@@ -68,7 +110,6 @@ export default function BeginningSection() {
         }
         const sparkles = sparklesRef.current;
 
-        // Pre-generate background stars
         const bgStarCanvas = document.createElement('canvas');
         bgStarCanvas.width = w;
         bgStarCanvas.height = h;
@@ -99,7 +140,6 @@ export default function BeginningSection() {
             time++;
             ctx.drawImage(bgStarCanvas, 0, 0);
 
-            // Heart burst mode — after catching all 5
             if (jarFullRef.current) {
                 heartProgressRef.current = Math.min(heartProgressRef.current + 0.025, 1);
                 const hp = heartProgressRef.current;
@@ -116,18 +156,17 @@ export default function BeginningSection() {
                     ctx.globalAlpha = heartEased * shimmer * 0.4;
                     ctx.beginPath();
                     ctx.arc(px, py, 6, 0, Math.PI * 2);
-                    ctx.fillStyle = `hsl(340, 90%, 65%)`;
+                    ctx.fillStyle = 'hsl(340, 90%, 65%)';
                     ctx.fill();
 
                     ctx.globalAlpha = heartEased * shimmer;
                     ctx.beginPath();
                     ctx.arc(px, py, 2, 0, Math.PI * 2);
-                    ctx.fillStyle = `hsl(350, 100%, 85%)`;
+                    ctx.fillStyle = 'hsl(350, 100%, 85%)';
                     ctx.fill();
                 }
                 ctx.globalAlpha = 1;
 
-                // After heart animation completes, show catalog immediately
                 if (hp >= 1 && !showCatalogRef.current) {
                     showCatalogRef.current = true;
                     setShowCatalog(true);
@@ -163,7 +202,6 @@ export default function BeginningSection() {
             ctx.textAlign = 'center';
             ctx.fillText(`${caughtRef.current} / ${TOTAL}`, jarX, jarY + jarH / 2 + 24);
 
-            // Fireflies
             fireflies.forEach((f) => {
                 if (f.caught) {
                     f.catchAnim = Math.min(f.catchAnim + 0.04, 1);
@@ -206,7 +244,6 @@ export default function BeginningSection() {
             });
             ctx.globalAlpha = 1;
 
-            // Sparkles
             for (let i = sparkles.length - 1; i >= 0; i--) {
                 const s = sparkles[i];
                 s.x += s.vx; s.y += s.vy; s.vy += 0.05; s.life -= 0.02;
@@ -223,14 +260,12 @@ export default function BeginningSection() {
         };
         animate();
 
-        // Visibility
         const observer = new IntersectionObserver(
             ([entry]) => { isVisibleRef.current = entry.isIntersecting; },
             { threshold: 0.05 }
         );
         observer.observe(section);
 
-        // Click to catch
         const handleClick = (e: MouseEvent | TouchEvent) => {
             if (jarFullRef.current) return;
             const rect = canvas.getBoundingClientRect();
@@ -259,7 +294,10 @@ export default function BeginningSection() {
         canvas.addEventListener('click', handleClick);
         canvas.addEventListener('touchstart', handleClick);
 
-        const handleResize = () => { w = window.innerWidth; h = window.innerHeight; canvas.width = w; canvas.height = h; };
+        const handleResize = () => {
+            w = window.innerWidth; h = window.innerHeight;
+            canvas.width = w; canvas.height = h;
+        };
         window.addEventListener('resize', handleResize);
 
         return () => {
@@ -271,61 +309,78 @@ export default function BeginningSection() {
         };
     }, [spawnFirefly]);
 
-    // Horizontal scroll with mouse wheel
+    // GSAP horizontal scroll for catalog
     useEffect(() => {
-        const catalog = catalogRef.current;
-        if (!catalog || !showCatalog) return;
+        if (!showCatalog) return;
 
-        const handleWheel = (e: WheelEvent) => {
-            e.preventDefault();
-            catalog.scrollLeft += e.deltaY * 2;
-        };
-        catalog.addEventListener('wheel', handleWheel, { passive: false });
-        return () => catalog.removeEventListener('wheel', handleWheel);
+        // Small delay to let DOM render
+        const timeout = setTimeout(() => {
+            const catalogSection = catalogSectionRef.current;
+            const track = catalogTrackRef.current;
+            if (!catalogSection || !track) return;
+
+            const totalScrollWidth = track.scrollWidth - window.innerWidth;
+
+            const st = ScrollTrigger.create({
+                trigger: catalogSection,
+                start: 'top top',
+                end: () => `+=${totalScrollWidth}`,
+                pin: true,
+                scrub: 1,
+                onUpdate: (self) => {
+                    gsap.set(track, { x: -self.progress * totalScrollWidth });
+                },
+            });
+
+            return () => st.kill();
+        }, 100);
+
+        return () => clearTimeout(timeout);
     }, [showCatalog]);
 
     return (
-        <div ref={sectionRef} className="relative w-full h-screen overflow-hidden" style={{ background: '#020510' }}>
-            {/* Firefly game Canvas */}
-            <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full cursor-pointer"
+        <>
+            {/* ======= FIREFLY GAME SECTION ======= */}
+            <div
+                ref={sectionRef}
+                className="relative w-full h-screen overflow-hidden"
                 style={{
-                    opacity: showCatalog ? 0 : 1,
-                    transition: 'opacity 1s ease-out',
-                    pointerEvents: showCatalog ? 'none' : 'auto',
+                    background: '#020510',
+                    display: showCatalog ? 'none' : 'block',
                 }}
-            />
+            >
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-pointer" />
 
-            {/* Game UI */}
-            {!jarFull && !showCatalog && (
-                <div className="absolute top-8 left-0 right-0 z-10 text-center pointer-events-none" style={{ fontFamily: "'Inter', sans-serif", animation: 'fadeInDown 1s ease-out' }}>
-                    <p className="text-sm md:text-base font-light tracking-wide" style={{ color: 'rgba(120, 255, 200, 0.6)' }}>
-                        ✨ Tap the fireflies to catch them ✨
-                    </p>
-                </div>
-            )}
+                {!jarFull && (
+                    <div className="absolute top-8 left-0 right-0 z-10 text-center pointer-events-none" style={{ fontFamily: "'Inter', sans-serif", animation: 'fadeInDown 1s ease-out' }}>
+                        <p className="text-sm md:text-base font-light tracking-wide" style={{ color: 'rgba(120, 255, 200, 0.6)' }}>
+                            ✨ Tap the fireflies to catch them ✨
+                        </p>
+                    </div>
+                )}
 
-            {jarFull && !showCatalog && (
-                <div className="absolute inset-0 z-10 flex items-end justify-center pb-20 pointer-events-none">
-                    <p className="text-2xl md:text-3xl font-light" style={{ fontFamily: "'Playfair Display', serif", color: 'rgba(255, 150, 180, 0.9)', animation: 'fadeInUp 2s ease-out' }}>
-                        You caught them all ❤️
-                    </p>
-                </div>
-            )}
+                {jarFull && !showCatalog && (
+                    <div className="absolute inset-0 z-10 flex items-end justify-center pb-20 pointer-events-none">
+                        <p className="text-2xl md:text-3xl font-light" style={{ fontFamily: "'Playfair Display', serif", color: 'rgba(255, 150, 180, 0.9)', animation: 'fadeInUp 2s ease-out' }}>
+                            You caught them all ❤️
+                        </p>
+                    </div>
+                )}
+            </div>
 
-            {/* ============ UNLOCKED CATALOG ============ */}
+            {/* ======= CATALOG SECTION (scroll-driven horizontal) ======= */}
             {showCatalog && (
                 <div
-                    className="absolute inset-0 z-20 flex flex-col"
+                    ref={catalogSectionRef}
+                    className="relative w-full h-screen overflow-hidden"
                     style={{
                         background: 'linear-gradient(180deg, #0a0515 0%, #120820 30%, #1a0a2e 60%, #0a0515 100%)',
-                        animation: 'catalogFadeIn 1.5s ease-out',
+                        animation: 'catalogFadeIn 1.2s ease-out',
                     }}
                 >
-                    {/* Decorative floating sparkles */}
+                    {/* Floating sparkles */}
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        {Array.from({ length: 20 }).map((_, i) => (
+                        {Array.from({ length: 15 }).map((_, i) => (
                             <div
                                 key={i}
                                 className="absolute rounded-full"
@@ -334,7 +389,7 @@ export default function BeginningSection() {
                                     height: 2 + Math.random() * 4,
                                     left: `${Math.random() * 100}%`,
                                     top: `${Math.random() * 100}%`,
-                                    background: `rgba(255, 215, 0, ${0.15 + Math.random() * 0.3})`,
+                                    background: `rgba(255, 215, 0, ${0.15 + Math.random() * 0.25})`,
                                     animation: `sparkleFloat ${3 + Math.random() * 4}s ease-in-out ${Math.random() * 3}s infinite alternate`,
                                 }}
                             />
@@ -342,9 +397,9 @@ export default function BeginningSection() {
                     </div>
 
                     {/* Header */}
-                    <div className="flex-shrink-0 pt-6 pb-4 md:pt-10 md:pb-6 text-center relative z-10">
-                        <div className="flex items-center justify-center gap-3 mb-2">
-                            <span className="text-2xl">👑</span>
+                    <div className="absolute top-0 left-0 right-0 pt-6 pb-3 md:pt-8 md:pb-4 text-center z-20">
+                        <div className="flex items-center justify-center gap-3 mb-1">
+                            <span className="text-xl">👑</span>
                             <h2
                                 className="text-2xl md:text-4xl font-semibold tracking-wide"
                                 style={{
@@ -356,126 +411,176 @@ export default function BeginningSection() {
                             >
                                 My Little Princess
                             </h2>
-                            <span className="text-2xl">👑</span>
+                            <span className="text-xl">👑</span>
                         </div>
                         <p
-                            className="text-xs md:text-sm font-light tracking-widest uppercase"
-                            style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255, 200, 255, 0.4)' }}
+                            className="text-xs font-light tracking-widest uppercase"
+                            style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255, 200, 255, 0.35)' }}
                         >
-                            Swipe to explore your memories →
+                            Scroll down to explore · Click a card to flip
                         </p>
                     </div>
 
-                    {/* Horizontal Scroll Gallery */}
+                    {/* Horizontal track */}
                     <div
-                        ref={catalogRef}
-                        className="flex-1 flex items-center overflow-x-auto overflow-y-hidden px-8 md:px-16 gap-6 md:gap-10 pb-8"
-                        style={{
-                            scrollSnapType: 'x mandatory',
-                            scrollBehavior: 'smooth',
-                            msOverflowStyle: 'none',
-                            scrollbarWidth: 'none',
-                        }}
+                        ref={catalogTrackRef}
+                        className="absolute top-0 left-0 h-full flex items-center gap-8 md:gap-12 pl-8 md:pl-20 pr-[50vw]"
+                        style={{ paddingTop: '60px' }}
                     >
-                        {PHOTOS.map((photo, idx) => (
+                        {CARDS.map((card, idx) => (
                             <div
-                                key={photo.id}
-                                className="flex-shrink-0 flex flex-col items-center gap-3"
+                                key={card.id}
+                                className="flex-shrink-0 cursor-pointer"
                                 style={{
-                                    scrollSnapAlign: 'center',
-                                    animation: `cardSlideIn 0.8s ease-out ${idx * 0.15}s both`,
+                                    perspective: '1200px',
+                                    animation: `cardSlideIn 0.8s ease-out ${idx * 0.12}s both`,
                                 }}
+                                onClick={() => toggleFlip(card.id)}
                             >
-                                {/* Photo Frame — ornate gold border */}
                                 <div
-                                    className="relative group cursor-pointer"
+                                    className="relative transition-transform duration-700"
                                     style={{
-                                        width: 'clamp(220px, 40vw, 320px)',
-                                        height: 'clamp(280px, 50vw, 400px)',
+                                        width: 'clamp(250px, 35vw, 340px)',
+                                        height: 'clamp(340px, 55vh, 460px)',
+                                        transformStyle: 'preserve-3d',
+                                        transform: flipped[card.id] ? 'rotateY(180deg)' : 'rotateY(0deg)',
                                     }}
                                 >
-                                    {/* Gold frame border */}
+                                    {/* ===== FRONT ===== */}
                                     <div
-                                        className="absolute -inset-[3px] rounded-2xl"
+                                        className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col items-center justify-center"
                                         style={{
-                                            background: 'linear-gradient(135deg, #FFD700, #B8860B, #FFD700, #DAA520, #FFD700)',
-                                            boxShadow: '0 0 20px rgba(255, 215, 0, 0.15), inset 0 0 20px rgba(255, 215, 0, 0.1)',
+                                            backfaceVisibility: 'hidden',
+                                            WebkitBackfaceVisibility: 'hidden',
                                         }}
-                                    />
-
-                                    {/* Inner frame */}
-                                    <div
-                                        className="absolute -inset-[1px] rounded-[14px]"
-                                        style={{ background: '#1a0a2e' }}
-                                    />
-
-                                    {/* Photo / Placeholder */}
-                                    <div
-                                        className="relative w-full h-full rounded-xl overflow-hidden flex flex-col items-center justify-center transition-transform duration-500 group-hover:scale-[1.02]"
-                                        style={{ background: photo.gradient }}
                                     >
-                                        <span className="text-6xl md:text-7xl mb-3 drop-shadow-lg">{photo.emoji}</span>
-                                        <p
-                                            className="text-base md:text-lg font-medium text-center px-4"
-                                            style={{
-                                                fontFamily: "'Playfair Display', serif",
-                                                color: 'rgba(80, 40, 60, 0.7)',
-                                            }}
-                                        >
-                                            {photo.label}
-                                        </p>
-                                        <p
-                                            className="text-xs font-light mt-1"
-                                            style={{
-                                                fontFamily: "'Inter', sans-serif",
-                                                color: 'rgba(80, 40, 60, 0.4)',
-                                            }}
-                                        >
-                                            Photo {photo.id}
-                                        </p>
-
-                                        {/* Shimmer overlay on hover */}
+                                        {/* Gold frame */}
                                         <div
-                                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                                            className="absolute -inset-[3px] rounded-2xl"
                                             style={{
-                                                background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)',
-                                                animation: 'shimmer 2s ease-in-out infinite',
+                                                background: 'linear-gradient(135deg, #FFD700, #B8860B, #FFD700, #DAA520, #FFD700)',
+                                                boxShadow: '0 0 25px rgba(255, 215, 0, 0.15)',
                                             }}
                                         />
+                                        <div className="absolute -inset-[1px] rounded-[14px]" style={{ background: '#1a0a2e' }} />
+
+                                        {/* Content — image with overlay */}
+                                        <div
+                                            className="relative w-full h-full rounded-xl overflow-hidden flex flex-col items-center justify-end"
+                                            style={{
+                                                backgroundImage: `url(${card.image})`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: card.bgPos || 'center',
+                                            }}
+                                        >
+                                            {/* Bottom overlay with emoji + text */}
+                                            <div
+                                                className="w-full flex flex-col items-center gap-1 py-4 px-3"
+                                                style={{
+                                                    background: 'linear-gradient(transparent, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.75))',
+                                                }}
+                                            >
+                                                <span className="text-3xl md:text-4xl drop-shadow-lg">{card.emoji}</span>
+                                                <p
+                                                    className="text-xl md:text-2xl font-semibold italic"
+                                                    style={{
+                                                        fontFamily: "'Playfair Display', serif",
+                                                        color: 'rgba(255, 255, 255, 0.9)',
+                                                        textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                                                    }}
+                                                >
+                                                    Because.
+                                                </p>
+                                                <p
+                                                    className="text-[10px] font-light uppercase tracking-widest"
+                                                    style={{
+                                                        fontFamily: "'Inter', sans-serif",
+                                                        color: 'rgba(255, 255, 255, 0.45)',
+                                                    }}
+                                                >
+                                                    Tap to reveal
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Corner decorations */}
+                                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 rounded-tl-lg" style={{ borderColor: '#FFD700' }} />
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 rounded-tr-lg" style={{ borderColor: '#FFD700' }} />
+                                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: '#FFD700' }} />
+                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 rounded-br-lg" style={{ borderColor: '#FFD700' }} />
                                     </div>
 
-                                    {/* Corner decorations */}
-                                    <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 rounded-tl-lg" style={{ borderColor: '#FFD700' }} />
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 rounded-tr-lg" style={{ borderColor: '#FFD700' }} />
-                                    <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: '#FFD700' }} />
-                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 rounded-br-lg" style={{ borderColor: '#FFD700' }} />
+                                    {/* ===== BACK ===== */}
+                                    <div
+                                        className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col items-center justify-center"
+                                        style={{
+                                            backfaceVisibility: 'hidden',
+                                            WebkitBackfaceVisibility: 'hidden',
+                                            transform: 'rotateY(180deg)',
+                                        }}
+                                    >
+                                        {/* Gold frame */}
+                                        <div
+                                            className="absolute -inset-[3px] rounded-2xl"
+                                            style={{
+                                                background: 'linear-gradient(135deg, #FFD700, #B8860B, #FFD700, #DAA520, #FFD700)',
+                                                boxShadow: '0 0 30px rgba(255, 215, 0, 0.2)',
+                                            }}
+                                        />
+                                        <div className="absolute -inset-[1px] rounded-[14px]" style={{ background: '#120820' }} />
+
+                                        {/* Back content */}
+                                        <div
+                                            className="relative w-full h-full rounded-xl flex flex-col items-center justify-center px-6 md:px-8"
+                                            style={{
+                                                background: 'linear-gradient(180deg, #1a0d2e 0%, #0f0820 50%, #1a0d2e 100%)',
+                                            }}
+                                        >
+                                            {/* Quote mark */}
+                                            <span
+                                                className="absolute top-4 left-5 text-4xl md:text-5xl leading-none"
+                                                style={{ color: 'rgba(255, 215, 0, 0.15)', fontFamily: 'Georgia, serif' }}
+                                            >
+                                                "
+                                            </span>
+
+                                            <p
+                                                className="text-sm md:text-base font-light leading-relaxed text-center italic"
+                                                style={{
+                                                    fontFamily: "'Playfair Display', serif",
+                                                    color: 'rgba(255, 240, 220, 0.85)',
+                                                    lineHeight: '1.8',
+                                                }}
+                                            >
+                                                {card.back}
+                                            </p>
+
+                                            <span
+                                                className="absolute bottom-4 right-5 text-4xl md:text-5xl leading-none"
+                                                style={{ color: 'rgba(255, 215, 0, 0.15)', fontFamily: 'Georgia, serif' }}
+                                            >
+                                                "
+                                            </span>
+
+                                            <p
+                                                className="absolute bottom-3 left-0 right-0 text-center text-xs font-light uppercase tracking-widest"
+                                                style={{
+                                                    fontFamily: "'Inter', sans-serif",
+                                                    color: 'rgba(255, 215, 0, 0.25)',
+                                                }}
+                                            >
+                                                Tap to close
+                                            </p>
+                                        </div>
+
+                                        {/* Corner decorations */}
+                                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 rounded-tl-lg" style={{ borderColor: '#FFD700' }} />
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 rounded-tr-lg" style={{ borderColor: '#FFD700' }} />
+                                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: '#FFD700' }} />
+                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 rounded-br-lg" style={{ borderColor: '#FFD700' }} />
+                                    </div>
                                 </div>
-
-                                {/* Photo caption */}
-                                <p
-                                    className="text-xs font-light tracking-wider uppercase"
-                                    style={{
-                                        fontFamily: "'Inter', sans-serif",
-                                        color: 'rgba(255, 215, 0, 0.35)',
-                                    }}
-                                >
-                                    {photo.label}
-                                </p>
                             </div>
-                        ))}
-
-                        {/* End spacer */}
-                        <div className="flex-shrink-0 w-8" />
-                    </div>
-
-                    {/* Scroll progress dots */}
-                    <div className="flex-shrink-0 flex items-center justify-center gap-2 pb-6">
-                        {PHOTOS.map((_, i) => (
-                            <div
-                                key={i}
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ background: `rgba(255, 215, 0, ${i === 0 ? 0.6 : 0.2})` }}
-                            />
                         ))}
                     </div>
                 </div>
@@ -490,12 +595,7 @@ export default function BeginningSection() {
                     0% { opacity: 0.2; transform: translateY(0) scale(1); }
                     100% { opacity: 0.6; transform: translateY(-15px) scale(1.5); }
                 }
-                @keyframes shimmer {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-                div::-webkit-scrollbar { display: none; }
             `}</style>
-        </div>
+        </>
     );
 }

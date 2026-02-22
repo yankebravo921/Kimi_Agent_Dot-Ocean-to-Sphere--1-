@@ -15,6 +15,42 @@ interface Lantern {
     forming: boolean;
 }
 
+function getTextPositions(
+    text: string,
+    canvasW: number,
+    canvasH: number,
+    fontSize: number,
+    spacing: number
+): { x: number; y: number }[] {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, canvasW / 2, canvasH / 2);
+
+    const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
+    const pixels = imageData.data;
+    const positions: { x: number; y: number }[] = [];
+
+    for (let y = 0; y < canvasH; y += spacing) {
+        for (let x = 0; x < canvasW; x += spacing) {
+            const idx = (y * canvasW + x) * 4;
+            if (pixels[idx] > 128) {
+                positions.push({ x, y });
+            }
+        }
+    }
+    return positions;
+}
+
 export default function PromiseSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,6 +59,7 @@ export default function PromiseSection() {
     const countRef = useRef(0);
     const formingRef = useRef(false);
     const isVisibleRef = useRef(false);
+    const textPosRef = useRef<{ x: number; y: number }[]>([]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -37,19 +74,17 @@ export default function PromiseSection() {
 
         const lanterns = lanternsRef.current;
 
-        // Pre-render background (stars baked in)
+        // Pre-render background (stars)
         const bgCanvas = document.createElement('canvas');
         bgCanvas.width = w;
         bgCanvas.height = h;
         const bgCtx = bgCanvas.getContext('2d')!;
-        // Sky gradient
         const skyGrad = bgCtx.createLinearGradient(0, 0, 0, h);
         skyGrad.addColorStop(0, '#050a19');
         skyGrad.addColorStop(0.6, '#030610');
         skyGrad.addColorStop(1, '#020408');
         bgCtx.fillStyle = skyGrad;
         bgCtx.fillRect(0, 0, w, h);
-        // Stars
         for (let i = 0; i < 150; i++) {
             bgCtx.beginPath();
             bgCtx.arc(Math.random() * w, Math.random() * h, 0.3 + Math.random() * 1.2, 0, Math.PI * 2);
@@ -57,19 +92,23 @@ export default function PromiseSection() {
             bgCtx.fill();
         }
 
-        // Heart formation targets
-        const heartPositions: { x: number; y: number }[] = [];
-        const heartCX = w / 2;
-        const heartCY = h * 0.4;
-        const heartScale = Math.min(w, h) * 0.15;
-        for (let a = 0; a < Math.PI * 2; a += 0.25) {
-            const hx = 16 * Math.pow(Math.sin(a), 3);
-            const hy = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
-            heartPositions.push({
-                x: heartCX + (hx / 16) * heartScale,
-                y: heartCY + (hy / 16) * heartScale,
-            });
-        }
+        // "I ❤ YOU" text positions for formation — BIG
+        const textCanvasW = 512;
+        const textCanvasH = 160;
+        const fontSize = 110;
+        const rawPositions = getTextPositions('I ❤ YOU', textCanvasW, textCanvasH, fontSize, 10);
+
+        // Scale to fill most of the screen
+        const scaleX = (w * 0.85) / textCanvasW;
+        const scaleY = (h * 0.5) / textCanvasH;
+        const scale = Math.min(scaleX, scaleY);
+        const offsetX = (w - textCanvasW * scale) / 2;
+        const offsetY = (h * 0.45) - (textCanvasH * scale) / 2;
+
+        textPosRef.current = rawPositions.map((p) => ({
+            x: p.x * scale + offsetX,
+            y: p.y * scale + offsetY,
+        }));
 
         let animFrame: number;
         let time = 0;
@@ -80,14 +119,14 @@ export default function PromiseSection() {
             time++;
             ctx.drawImage(bgCanvas, 0, 0);
 
-            // Start forming heart after 12 lanterns
-            if (countRef.current >= 12 && !formingRef.current) {
+            // Start forming "I ❤ YOU" after 12 lanterns
+            if (countRef.current >= 8 && !formingRef.current) {
                 formingRef.current = true;
                 lanterns.forEach((l, i) => {
                     l.forming = true;
-                    const hp = heartPositions[i % heartPositions.length];
-                    l.targetX = hp.x + (Math.random() - 0.5) * 10;
-                    l.targetY = hp.y + (Math.random() - 0.5) * 10;
+                    const tp = textPosRef.current[i % textPosRef.current.length];
+                    l.targetX = tp.x + (Math.random() - 0.5) * 6;
+                    l.targetY = tp.y + (Math.random() - 0.5) * 6;
                 });
             }
 
@@ -114,7 +153,7 @@ export default function PromiseSection() {
                 const flickerAlpha = 0.6 + 0.4 * Math.sin(l.glow);
                 const lanternAlpha = Math.min(l.age / 30, 1) * flickerAlpha;
 
-                // Outer glow (simple circle, no gradient)
+                // Outer glow
                 ctx.globalAlpha = lanternAlpha * 0.08;
                 ctx.beginPath();
                 ctx.arc(l.x, l.y, l.size * 8, 0, Math.PI * 2);
@@ -150,33 +189,40 @@ export default function PromiseSection() {
         );
         observer.observe(section);
 
-        // Click to release lantern
+        // Click to release lanterns — 5 per click for fast fill
+        const LANTERNS_PER_CLICK = 5;
         const handleClick = (e: MouseEvent | TouchEvent) => {
             let cx: number, cy: number;
             if ('touches' in e) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
             else { cx = e.clientX; cy = e.clientY; }
 
-            const lantern: Lantern = {
-                x: cx, y: cy,
-                targetX: cx, targetY: cy - 200,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: -0.5 - Math.random() * 0.5,
-                size: 5 + Math.random() * 3,
-                glow: Math.random() * Math.PI * 2,
-                glowSpeed: 0.03 + Math.random() * 0.03,
-                hue: 25 + Math.random() * 20,
-                age: 0,
-                forming: formingRef.current,
-            };
+            for (let n = 0; n < LANTERNS_PER_CLICK; n++) {
+                const spread = 30;
+                const spawnX = cx + (Math.random() - 0.5) * spread;
+                const spawnY = cy + (Math.random() - 0.5) * spread;
 
-            if (formingRef.current) {
-                const hp = heartPositions[lanterns.length % heartPositions.length];
-                lantern.targetX = hp.x + (Math.random() - 0.5) * 10;
-                lantern.targetY = hp.y + (Math.random() - 0.5) * 10;
+                const lantern: Lantern = {
+                    x: spawnX, y: spawnY,
+                    targetX: spawnX, targetY: spawnY - 200,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: -0.5 - Math.random() * 0.8,
+                    size: 5 + Math.random() * 3,
+                    glow: Math.random() * Math.PI * 2,
+                    glowSpeed: 0.03 + Math.random() * 0.03,
+                    hue: 25 + Math.random() * 20,
+                    age: 0,
+                    forming: formingRef.current,
+                };
+
+                if (formingRef.current) {
+                    const tp = textPosRef.current[lanterns.length % textPosRef.current.length];
+                    lantern.targetX = tp.x + (Math.random() - 0.5) * 6;
+                    lantern.targetY = tp.y + (Math.random() - 0.5) * 6;
+                }
+
+                lanterns.push(lantern);
             }
-
-            lanterns.push(lantern);
-            countRef.current++;
+            countRef.current += LANTERNS_PER_CLICK;
             setCount(countRef.current);
         };
 
@@ -198,13 +244,23 @@ export default function PromiseSection() {
     return (
         <div ref={sectionRef} className="relative w-full h-screen overflow-hidden" style={{ background: '#020408' }}>
             <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-pointer" />
+
+            {/* Instruction — big, glowing, visible */}
             <div className="absolute bottom-10 left-0 right-0 z-10 text-center pointer-events-none">
-                <p className="text-sm md:text-base font-light tracking-wide" style={{
-                    fontFamily: "'Inter', sans-serif",
-                    color: count >= 12 ? 'rgba(255, 180, 120, 0.7)' : 'rgba(200, 180, 150, 0.5)',
-                    transition: 'color 1s ease',
-                }}>
-                    {count >= 12 ? '✨ Your wishes are forming something beautiful ✨' : `🏮 Tap anywhere to release a lantern — ${count} released`}
+                <p
+                    className="text-base md:text-xl font-medium tracking-wide"
+                    style={{
+                        fontFamily: "'Inter', sans-serif",
+                        color: count >= 40
+                            ? 'rgba(255, 200, 120, 0.9)'
+                            : 'rgba(255, 200, 120, 0.85)',
+                        textShadow: '0 0 15px rgba(255, 180, 80, 0.4), 0 0 30px rgba(255, 150, 50, 0.2)',
+                        transition: 'color 1s ease',
+                    }}
+                >
+                    {count >= 40
+                        ? '✨ Your lanterns are forming something beautiful ✨'
+                        : `🏮 Tap anywhere to release a lantern — ${count} released`}
                 </p>
             </div>
         </div>

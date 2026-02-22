@@ -228,7 +228,7 @@ export default function ParticleOcean() {
     const scene = new THREE.Scene();
 
     // Exponential fog for depth - matching reference
-    scene.fog = new THREE.FogExp2(0x0a1f15, 0.012);
+    scene.fog = new THREE.FogExp2(0x0a0515, 0.012);
 
     // Camera - positioned for perspective view like reference
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 500);
@@ -243,7 +243,7 @@ export default function ParticleOcean() {
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-    renderer.setClearColor(0x0a1f15, 1);
+    renderer.setClearColor(0x0a0515, 1);
     container.appendChild(renderer.domElement);
 
     // Soft spotlight at top center - matching reference
@@ -256,7 +256,7 @@ export default function ParticleOcean() {
     scene.add(spotLight);
 
     // Ambient light for base illumination
-    const ambientLight = new THREE.AmbientLight(0x1a3d2e, 0.4);
+    const ambientLight = new THREE.AmbientLight(0x2a1540, 0.4);
     scene.add(ambientLight);
 
     // Particle count - more for denser field
@@ -300,12 +300,12 @@ export default function ParticleOcean() {
     // -------------------------------------------------------
     const textCanvasWidth = 1024;
     const textCanvasHeight = 256;
-    const textFontSize = 160;
-    const textPositions = getTextPositions('Hey sweety', textCanvasWidth, textCanvasHeight, textFontSize);
+    const textFontSize = 70;
+    const textPositions = getTextPositions('Happy birthday sweety ❤', textCanvasWidth, textCanvasHeight, textFontSize);
 
     // Scale factor: map canvas coordinates to 3D world coordinates
-    // The text should be roughly 60 units wide and 15 units tall
-    const textWorldWidth = 60;
+    // The text should be roughly 50 units wide
+    const textWorldWidth = 50;
     const textWorldHeight = (textCanvasHeight / textCanvasWidth) * textWorldWidth;
     const textCenterY = 10; // vertical center of text in world
 
@@ -344,7 +344,7 @@ export default function ParticleOcean() {
         uProgress: { value: 0 },
         uWaveAmplitude: { value: 6 },
         uPointSize: { value: 2.5 },
-        uColor: { value: new THREE.Color(0xe8f5f2) } // White-ish teal like reference
+        uColor: { value: new THREE.Color(0xe0d0f5) } // Light lavender-purple
       },
       vertexShader,
       fragmentShader,
