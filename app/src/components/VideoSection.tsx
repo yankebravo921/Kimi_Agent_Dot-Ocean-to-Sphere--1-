@@ -1,158 +1,63 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import type { RefObject } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
+type VideoSectionProps = {
+    sectionRef?: RefObject<HTMLDivElement>;
+};
 
-export default function VideoSection() {
-    const sectionRef = useRef<HTMLDivElement>(null);
+export default function VideoSection({ sectionRef: externalSectionRef }: VideoSectionProps) {
+    const internalRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const progressRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
     const [showEndMessage, setShowEndMessage] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [showControls, setShowControls] = useState(true);
-    const [isSeeking, setIsSeeking] = useState(false);
     const [heartsActive, setHeartsActive] = useState(false);
-    const hideControlsTimer = useRef<number | null>(null);
     const heartLoopRef = useRef<number | null>(null);
 
-    useEffect(() => {
-        if (!sectionRef.current) return;
-        if (contentRef.current) {
-            gsap.fromTo(
-                contentRef.current,
-                { opacity: 0, y: 50 },
-                {
-                    opacity: 1, y: 0, duration: 1, ease: 'power2.out',
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: 'top 60%', end: 'top 20%', scrub: 1,
-                    },
-                }
-            );
+    // Merge internal ref with the external ref passed from App.tsx (needed for music pause)
+    const handleSectionRef = useCallback((node: HTMLDivElement | null) => {
+        (internalRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        if (externalSectionRef) {
+            (externalSectionRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
         }
+    }, [externalSectionRef]);
+
+    useEffect(() => {
+        const section = internalRef.current;
+        if (!section || !contentRef.current) return;
+        gsap.fromTo(
+            contentRef.current,
+            { opacity: 0, y: 50 },
+            {
+                opacity: 1, y: 0, duration: 1, ease: 'power2.out',
+                scrollTrigger: {
+                    trigger: section,
+                    start: 'top 60%', end: 'top 20%', scrub: 1,
+                },
+            }
+        );
     }, []);
 
-    // Time update
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
+    const handlePlay = () => setIsPlaying(true);
 
-        const onTimeUpdate = () => setCurrentTime(video.currentTime);
-        const onLoadedMetadata = () => setDuration(video.duration);
-        const onDurationChange = () => setDuration(video.duration);
-
-        video.addEventListener('timeupdate', onTimeUpdate);
-        video.addEventListener('loadedmetadata', onLoadedMetadata);
-        video.addEventListener('durationchange', onDurationChange);
-
-        return () => {
-            video.removeEventListener('timeupdate', onTimeUpdate);
-            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-            video.removeEventListener('durationchange', onDurationChange);
-        };
-    }, []);
-
-    // Auto-hide controls after 3s of no interaction
-    const resetHideTimer = useCallback(() => {
-        setShowControls(true);
-        if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-        hideControlsTimer.current = window.setTimeout(() => {
-            if (!isSeeking) setShowControls(false);
-        }, 3000);
-    }, [isSeeking]);
-
-    const handlePlay = () => {
-        if (videoRef.current) {
-            videoRef.current.play();
-            setIsPlaying(true);
-            setIsPaused(false);
-            resetHideTimer();
-        }
-    };
-
-    const handleTogglePlay = () => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (video.paused) {
-            video.play();
-            setIsPaused(false);
-        } else {
-            video.pause();
-            setIsPaused(true);
-            setShowControls(true);
-        }
-        resetHideTimer();
-    };
-
-    const handleVideoEnd = () => {
+    const handleShowEndScreen = () => {
         setShowEndMessage(true);
-        setIsPaused(false);
         triggerHeartBurst();
     };
 
     const handleReplay = () => {
-        if (videoRef.current) {
-            videoRef.current.currentTime = 0;
-            videoRef.current.play();
-            setShowEndMessage(false);
-            setIsPaused(false);
-            resetHideTimer();
-        }
+        setShowEndMessage(false);
+        stopHeartBurst();
+        setHeartsActive(false);
+        setIsPlaying(false);
+        // Remount the iframe so Streamable restarts
+        setTimeout(() => setIsPlaying(true), 150);
     };
-
-    // Seek on progress bar click/drag
-    const handleSeek = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-        const bar = progressRef.current;
-        const video = videoRef.current;
-        if (!bar || !video || !duration) return;
-
-        const rect = bar.getBoundingClientRect();
-        let clientX: number;
-        if ('touches' in e) {
-            clientX = e.touches[0].clientX;
-        } else {
-            clientX = e.clientX;
-        }
-        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        video.currentTime = ratio * duration;
-        setCurrentTime(video.currentTime);
-        resetHideTimer();
-    };
-
-    const handleSeekStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-        setIsSeeking(true);
-        handleSeek(e);
-    };
-
-    const handleSeekMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-        if (!isSeeking) return;
-        handleSeek(e);
-    };
-
-    const handleSeekEnd = () => {
-        setIsSeeking(false);
-        resetHideTimer();
-    };
-
-    // Mouse move on video to show controls
-    const handleMouseMove = () => {
-        if (isPlaying && !showEndMessage) resetHideTimer();
-    };
-
-    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     const triggerHeartBurst = () => {
         const canvas = canvasRef.current;
@@ -211,11 +116,8 @@ export default function VideoSection() {
         const animateHearts = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             frameCount++;
-
-            // Spawn new hearts every 15 frames
             if (frameCount % 15 === 0) spawnBurst();
 
-            // Remove dead hearts to prevent memory buildup
             for (let i = hearts.length - 1; i >= 0; i--) {
                 if (hearts[i].opacity <= 0) hearts.splice(i, 1);
             }
@@ -258,20 +160,20 @@ export default function VideoSection() {
 
     return (
         <div
-            ref={sectionRef}
+            ref={handleSectionRef}
             className="relative w-full min-h-screen flex items-center justify-center"
             style={{
                 background: 'radial-gradient(ellipse at 50% 50%, #0d0a08 0%, #050302 50%, #020101 100%)',
             }}
         >
-            {/* Heart burst canvas */}
+            {/* Heart burst canvas — sits above everything */}
             <canvas
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ zIndex: 30 }}
             />
 
-            {/* Initial play screen — absolutely centered */}
+            {/* ── Initial play screen ── */}
             {!isPlaying && !showEndMessage && (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-8">
                     <p
@@ -284,7 +186,6 @@ export default function VideoSection() {
                         I made this for you.
                     </p>
 
-                    {/* Play button */}
                     <button
                         onClick={handlePlay}
                         className="group relative w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center transition-all duration-500 hover:scale-110"
@@ -311,130 +212,48 @@ export default function VideoSection() {
 
             <div ref={contentRef} className="relative z-10 w-full max-w-4xl mx-auto px-6 py-20">
 
-                {/* Video container + controls */}
-                <div
-                    className={`relative w-full transition-all duration-700 ${isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={() => !isPaused && setShowControls(false)}
-                >
-                    {/* Video */}
-                    <div style={{ aspectRatio: '16/9' }} className="relative rounded-lg overflow-hidden">
-                        <video
-                            ref={videoRef}
-                            className="w-full h-full cursor-pointer"
-                            style={{ background: '#000' }}
-                            onEnded={handleVideoEnd}
-                            onClick={handleTogglePlay}
-                            playsInline
+                {/* ── Streamable embed — shown while playing, before end screen ── */}
+                {isPlaying && !showEndMessage && (
+                    <div className="relative w-full pb-16" style={{ aspectRatio: '16/9' }}>
+                        <iframe
+                            key={`streamable-${isPlaying}`}
+                            src="https://streamable.com/e/8o93nv?autoplay=1"
+                            frameBorder="0"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            className="rounded-lg"
+                            style={{
+                                position: 'absolute',
+                                top: 0, left: 0,
+                                width: '100%',
+                                height: '100%',
+                            }}
+                            title="Birthday Video"
+                        />
+
+                        {/* "Finished watching?" button below the video */}
+                        <div
+                            className="absolute -bottom-2 left-0 right-0 flex justify-center"
+                            style={{ zIndex: 5 }}
                         >
-                            <source src="/birthday-video.mp4" type="video/mp4" />
-                        </video>
-
-                        {/* Pause overlay icon */}
-                        {isPaused && (
-                            <div
-                                className="absolute inset-0 flex items-center justify-center cursor-pointer"
-                                onClick={handleTogglePlay}
-                                style={{ animation: 'fadeInControls 0.3s ease-out' }}
-                            >
-                                <div
-                                    className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center"
-                                    style={{
-                                        background: 'rgba(0, 0, 0, 0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                    }}
-                                >
-                                    <svg width="24" height="28" viewBox="0 0 28 32" fill="none" className="ml-1">
-                                        <path d="M4 2L26 16L4 30V2Z" fill="rgba(255, 255, 255, 0.9)" />
-                                    </svg>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Bottom controls bar */}
-                        {isPlaying && !showEndMessage && (
-                            <div
-                                className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-8"
+                            <button
+                                onClick={handleShowEndScreen}
+                                className="px-6 py-2 rounded-full text-xs font-light tracking-wide transition-all duration-300 hover:scale-105 whitespace-nowrap"
                                 style={{
-                                    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-                                    opacity: showControls || isPaused ? 1 : 0,
-                                    transition: 'opacity 0.3s ease',
-                                    pointerEvents: showControls || isPaused ? 'auto' : 'none',
+                                    fontFamily: "'Inter', sans-serif",
+                                    background: 'rgba(255, 180, 80, 0.15)',
+                                    border: '1px solid rgba(255, 180, 80, 0.3)',
+                                    color: 'rgba(255, 200, 130, 0.85)',
+                                    backdropFilter: 'blur(8px)',
                                 }}
                             >
-                                {/* Progress bar */}
-                                <div
-                                    ref={progressRef}
-                                    className="relative w-full h-1 rounded-full cursor-pointer group mb-2"
-                                    style={{ background: 'rgba(255, 255, 255, 0.2)' }}
-                                    onMouseDown={handleSeekStart}
-                                    onMouseMove={handleSeekMove}
-                                    onMouseUp={handleSeekEnd}
-                                    onMouseLeave={handleSeekEnd}
-                                    onTouchStart={handleSeekStart}
-                                    onTouchMove={handleSeekMove}
-                                    onTouchEnd={handleSeekEnd}
-                                >
-                                    {/* Filled progress */}
-                                    <div
-                                        className="absolute top-0 left-0 h-full rounded-full transition-all"
-                                        style={{
-                                            width: `${progress}%`,
-                                            background: 'linear-gradient(90deg, #FFD700, #FFA500)',
-                                            transition: isSeeking ? 'none' : 'width 0.1s linear',
-                                        }}
-                                    />
-                                    {/* Thumb dot */}
-                                    <div
-                                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        style={{
-                                            left: `${progress}%`,
-                                            transform: `translateX(-50%) translateY(-50%)`,
-                                            background: '#FFD700',
-                                            boxShadow: '0 0 6px rgba(255, 215, 0, 0.5)',
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Time + controls row */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        {/* Play/Pause button */}
-                                        <button
-                                            onClick={handleTogglePlay}
-                                            className="transition-transform duration-200 hover:scale-110"
-                                        >
-                                            {isPaused ? (
-                                                <svg width="16" height="18" viewBox="0 0 16 18" fill="none">
-                                                    <path d="M2 1L14 9L2 17V1Z" fill="rgba(255, 255, 255, 0.9)" />
-                                                </svg>
-                                            ) : (
-                                                <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
-                                                    <rect x="1" y="1" width="4" height="14" rx="1" fill="rgba(255, 255, 255, 0.9)" />
-                                                    <rect x="9" y="1" width="4" height="14" rx="1" fill="rgba(255, 255, 255, 0.9)" />
-                                                </svg>
-                                            )}
-                                        </button>
-
-                                        {/* Time display */}
-                                        <span
-                                            className="text-xs font-light"
-                                            style={{
-                                                fontFamily: "'Inter', sans-serif",
-                                                color: 'rgba(255, 255, 255, 0.7)',
-                                                fontVariantNumeric: 'tabular-nums',
-                                            }}
-                                        >
-                                            {formatTime(currentTime)} / {formatTime(duration)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                                ✨ Finished watching? Continue
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
 
-                {/* End message after video */}
+                {/* ── End message after video ── */}
                 {showEndMessage && (
                     <div className="flex flex-col items-center gap-8 py-10">
                         <h2
@@ -451,7 +270,7 @@ export default function VideoSection() {
                             Happy Birthday sweety ❤
                         </h2>
 
-                        <div className="flex gap-4 mt-4">
+                        <div className="flex gap-4 mt-4 flex-wrap justify-center">
                             <button
                                 onClick={handleReplay}
                                 className="px-8 py-3 rounded-full text-sm font-light tracking-wide transition-all duration-300 hover:scale-105"
@@ -483,7 +302,6 @@ export default function VideoSection() {
                 )}
             </div>
 
-            {/* CSS animations */}
             <style>{`
                 @keyframes pulse-ring {
                     0%, 100% { transform: scale(1); opacity: 1; }
@@ -492,10 +310,6 @@ export default function VideoSection() {
                 @keyframes glow-text {
                     0% { filter: brightness(1); }
                     100% { filter: brightness(1.3); }
-                }
-                @keyframes fadeInControls {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
                 }
             `}</style>
         </div>
