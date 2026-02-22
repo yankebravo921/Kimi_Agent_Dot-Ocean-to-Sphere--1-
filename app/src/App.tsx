@@ -89,7 +89,7 @@ function App() {
 
   return (
     <div className="relative">
-      <audio ref={audioRef} src="/bg-music.mp3" preload="auto" />
+      <audio ref={audioRef} src={`${import.meta.env.BASE_URL}bg-music.mp3`} preload="auto" />
       {/* Header overlay */}
       <header className="fixed top-0 left-0 right-0 z-50 px-8 py-6 pointer-events-none">
         <div className="flex items-center justify-between">

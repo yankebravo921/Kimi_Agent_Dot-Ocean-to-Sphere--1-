@@ -17,41 +17,43 @@ interface Sparkle {
 
 const TOTAL = 5;
 
+const BASE = import.meta.env.BASE_URL;
+
 const CARDS = [
     {
         id: 1,
-        image: '/card1.jpeg',
+        image: `${BASE}card1.jpeg`,
         emoji: '👑',
         back: 'Because the way you love isn\'t something you learned. It\'s something you are. All the way through. No seasons. No limits. I just got lucky enough to be loved by one.',
     },
     {
         id: 2,
-        image: '/card2.jpeg',
+        image: `${BASE}card2.jpeg`,
         bgPos: 'center 20%',
         emoji: '🌸',
         back: 'Because your heart is clean. In a world that teaches people to protect themselves by becoming hard, you stayed soft. You stayed true. That\'s not weakness. That\'s the rarest kind of courage.',
     },
     {
         id: 3,
-        image: '/card3.jpeg',
+        image: `${BASE}card3.jpeg`,
         emoji: '✨',
         back: 'Because you never stopped believing in me. Not once. On the days I couldn\'t see myself clearly, you held the vision steady. And quietly, without knowing it, you helped me get there.',
     },
     {
         id: 4,
-        image: '/card4.jpeg',
+        image: `${BASE}card4.jpeg`,
         emoji: '🦋',
         back: 'Because you never let me down. Not in the small things. Not in the ones that mattered most. In a world full of almost, you are someone who actually shows up. Completely. Every time.',
     },
     {
         id: 5,
-        image: '/card5.jpeg',
+        image: `${BASE}card5.jpeg`,
         emoji: '🌷',
         back: 'Because you feel everything fully and you\'re not ashamed of it. Your tears are real. Your joy is real. Your love is real. You live honestly from the inside out. And that kind of honesty — it\'s contagious.',
     },
     {
         id: 6,
-        image: '/card6.jpeg',
+        image: `${BASE}card6.jpeg`,
         bgPos: 'center 20%',
         emoji: '💫',
         back: 'Because underneath everything you\'re still that little kid. Still pure. Still curious. Still feeling the world like it\'s the first time. That part of you is the most precious thing I know. Happy Birthday, my love. Every single reason leads back to you. Always.',
