@@ -5,7 +5,7 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  base: '/Kimi_Agent_Dot-Ocean-to-Sphere--1-/',
   plugins: [inspectAttr(), react()],
   resolve: {
     alias: {
